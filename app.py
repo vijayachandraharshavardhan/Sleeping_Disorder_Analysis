@@ -17,6 +17,10 @@ def allowed_file(filename):
 def index():
     return render_template('index.html')
 
+@app.route('/healthz')
+def healthz():
+    return {'status': 'ok'}, 200
+
 @app.route('/dashboard')
 def dashboard():
     return render_template('dashboard.html')
@@ -345,4 +349,5 @@ Report Summary:
     return Response(report_content, mimetype='text/plain', headers={"Content-Disposition": "attachment; filename=patient_report.txt"})
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    port = int(os.environ.get('PORT', 5000))
+    app.run(host='0.0.0.0', port=port, debug=False)
