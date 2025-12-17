@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Symptoms - Sleep Disorder Diagnosis</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    body { min-height: 100vh; font-family: 'Arial', sans-serif; }
+    .container { padding-bottom: 100px; }
+    .card { transition: all 0.3s ease; border: 2px solid blue; border-radius: 15px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); display: flex; flex-direction: column; height: 100%; }
+    .card:hover { transform: scale(1.05); background: linear-gradient(45deg, #ff6b6b, #4ecdc4, #45b7d1, #96ceb4, #feca57); color: white; }
+    .card-body { flex-grow: 1; }
+    h1 { color: blue; text-shadow: 2px 2px 4px rgba(0,0,0,0.5); }
+    footer { background: linear-gradient(45deg, #343a40, #495057); }
+  </style>
+</head>
+<body>
+  <div class="container my-5">
+    <h1 class="text-center mb-5">Symptoms Related To Heart Rate</h1>
+    <div class="row">
+      <div class="col-md-4 mb-4">
+        <div class="card shadow-sm border-success">
+          <div class="card-header bg-success text-white">
+            <h5 class="card-title mb-0">Normal Heart Rate (60-100 BPM)</h5>
+          </div>
+          <div class="card-body">
+            <ul>
+              <li>Feeling energetic and alert</li>
+              <li>Good concentration and focus</li>
+              <li>Normal breathing</li>
+              <li>Balanced mood</li>
+              <li>Healthy sleep patterns</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-4 mb-4">
+        <div class="card shadow-sm border-warning">
+          <div class="card-header bg-warning text-dark">
+            <h5 class="card-title mb-0">Average Heart Rate (40-59 or 101-120 BPM)</h5>
+          </div>
+          <div class="card-body">
+            <ul>
+              <li>Fatigue or tiredness</li>
+              <li>Shortness of breath during activity</li>
+              <li>Dizziness or lightheadedness</li>
+              <li>Irregular heartbeat</li>
+              <li>Reduced exercise tolerance</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-4 mb-4">
+        <div class="card shadow-sm border-danger">
+          <div class="card-header bg-danger text-white">
+            <h5 class="card-title mb-0">Danger Heart Rate (<40 or >120 BPM)</h5>
+          </div>
+          <div class="card-body">
+            <ul>
+              <li>Chest pain or discomfort</li>
+              <li>Severe shortness of breath</li>
+              <li>Fainting or loss of consciousness</li>
+              <li>Rapid or irregular heartbeat</li>
+              <li>Confusion or disorientation</li>
+              <li>Extreme fatigue</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="text-center mt-4">
+      <a href="{{ url_for('index') }}" class="btn btn-secondary">Back to Dashboard</a>
+    </div>
+  </div>
+  <footer style="position: fixed; bottom: 0; width: 100%; background-color: #343a40; color: white; text-align: center; padding: 10px;">
+    @ALL RIGHTS RESERVED TO MY INTERN TEAM
+  </footer>
+</body>
+</html>

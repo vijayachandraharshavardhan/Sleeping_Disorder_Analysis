@@ -1,0 +1,16 @@
+venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+ENV/
+.venv/
+env.bak/
+venv.bak/
+.DS_Store
+*.log
+temp_audio.wav
+uploads/*
+!uploads/.gitkeep

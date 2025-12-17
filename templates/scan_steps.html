@@ -1,0 +1,296 @@
+  <!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Scan Steps</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+      body { background-color: #f8f9fa; min-height: 100vh; font-family: 'Arial', sans-serif; }
+      .container { padding-bottom: 100px; }
+      .card { transition: all 0.3s ease; border: 2px solid #007bff; border-radius: 15px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); background-color: white; margin-bottom: 20px; }
+      .card:hover { transform: scale(1.02); box-shadow: 0 8px 16px rgba(0,0,0,0.2); }
+      .card:nth-child(1) { border-color: #28a745; } /* Green for Step 1 */
+      .card:nth-child(2) { border-color: #ffc107; } /* Yellow for Step 2 */
+      h2 { color: #007bff; text-shadow: none; font-weight: bold; }
+      h4 { color: #007bff; }
+      .btn { margin: 5px; }
+      footer { background-color: #343a40; color: white; text-align: center; padding: 10px; }
+      @media (max-width: 768px) {
+        .card { margin-bottom: 15px; }
+        video { height: auto; max-height: 300px; }
+      }
+    </style>
+</head>
+<body>
+    <div class="container my-5">
+        <h2 class="text-center mb-4">Patient Scan</h2>
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ 'danger' if category == 'error' else 'info' }} alert-dismissible fade show" role="alert">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+        <div class="card shadow-sm p-4 mb-4">
+            <h4>Step 1: Heart Rate Scan</h4>
+            <p>Place your finger on the camera lens with flash on for 20 seconds to measure heart rate, or enter manually.</p>
+            {% if heart_checked %}
+                <div class="alert alert-success">Heart rate checked successfully.</div>
+            {% else %}
+                <video id="heartVideo" autoplay muted class="w-100 mb-3"></video>
+                <button id="startHeart" class="btn btn-primary">Start Heart Rate Scan</button>
+                <button id="stopHeart" class="btn btn-secondary" disabled>Stop and Proceed</button>
+                <hr>
+                <p>Or enter heart rate manually:</p>
+                <input type="number" id="manualHeartBpm" name="manual_heart_bpm" placeholder="Enter BPM manually (40-180)" class="form-control mb-3" min="40" max="180">
+                <button id="submitManualHeart" class="btn btn-success">Submit Manual Heart Rate</button>
+            {% endif %}
+        </div>
+        <div class="card shadow-sm p-4">
+            <h4>Step 2: Advanced Health Assessment</h4>
+            <p>Enter additional health metrics manually for comprehensive analysis.</p>
+            <p>Or upload a video file:</p>
+            <form id="uploadForm" method="POST" enctype="multipart/form-data" action="{{ url_for('analyze') }}">
+                <input type="number" id="manualBpm" name="bpm" placeholder="Enter BPM manually (optional)" class="form-control mb-3" min="40" max="150">
+                <div class="row">
+                    <div class="col-md-4">
+                        <label for="systolic">Systolic BP (mmHg)</label>
+                        <input type="number" id="systolic" name="systolic" placeholder="e.g. 120" class="form-control mb-3" min="90" max="200" required>
+                    </div>
+                    <div class="col-md-4">
+                        <label for="diastolic">Diastolic BP (mmHg)</label>
+                        <input type="number" id="diastolic" name="diastolic" placeholder="e.g. 80" class="form-control mb-3" min="60" max="120" required>
+                    </div>
+                    <div class="col-md-4">
+                        <label for="dailySteps">Daily Steps</label>
+                        <input type="number" id="dailySteps" name="daily_steps" placeholder="e.g. 5000" class="form-control mb-3" min="0" max="50000" required>
+                    </div>
+                </div>
+                <input type="file" id="snoreFileInput" name="video" accept="video/*" class="form-control mb-3">
+                <div class="form-check mb-3">
+                    <input class="form-check-input" type="checkbox" id="manualSnore" name="manual_snore">
+                    <label class="form-check-label" for="manualSnore">
+                        Manually confirm snore detected in the video
+                    </label>
+                </div>
+                <button id="uploadSnore" class="btn btn-success">Upload and Analyze</button>
+                <button id="analyzeManual" class="btn btn-info">Analyze Manually (No Video)</button>
+            </form>
+            <hr>
+            <p>Or record a video:</p>
+            <video id="snoreVideo" autoplay muted class="w-100 mb-3"></video>
+            <button id="startSnore" class="btn btn-primary">Start Snore Scan</button>
+            <button id="stopSnore" class="btn btn-secondary" disabled>Stop and Analyze</button>
+        </div>
+        <div id="loading" style="display:none; text-align:center; margin-top:20px;">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <h4 class="mt-3">Analyzing video... Please wait.</h4>
+            <p>This may take a few seconds.</p>
+        </div>
+
+        <form id="heartForm" method="POST" enctype="multipart/form-data" action="{{ url_for('process_heart_rate') }}" style="display:none;">
+            <input type="file" id="heartVideoInput" name="heart_video">
+            <button type="submit">Submit Heart</button>
+        </form>
+    </div>
+    <script>
+        let heartStream, snoreStream, heartRecorder, snoreRecorder;
+        let heartChunks = [], snoreChunks = [];
+
+        // Ensure buttons are enabled on page load
+        document.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('startSnore').disabled = false;
+            document.getElementById('stopSnore').disabled = true;
+        });
+
+        document.getElementById('startHeart').addEventListener('click', async () => {
+            // Voice instruction
+            const utterance = new SpeechSynthesisUtterance('checking heart rate place a finger on camera up to 20 secs');
+            window.speechSynthesis.speak(utterance);
+            try {
+                heartStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+                console.log('Camera and microphone access granted for heart rate scan');
+                document.getElementById('heartVideo').srcObject = heartStream;
+            } catch (error) {
+                console.error('Error accessing camera/microphone:', error);
+                alert('Camera access is required for heart rate scan. Please allow camera access and try again.');
+                return;
+            }
+            heartRecorder = new MediaRecorder(heartStream);
+            heartRecorder.ondataavailable = e => heartChunks.push(e.data);
+            heartRecorder.onstop = () => {
+                const blob = new Blob(heartChunks, { type: 'video/webm' });
+                const file = new File([blob], 'heart.webm', { type: 'video/webm' });
+                const dt = new DataTransfer();
+                dt.items.add(file);
+                document.getElementById('heartVideoInput').files = dt.files;
+                document.getElementById('heartForm').submit();
+            };
+            heartRecorder.start();
+            document.getElementById('startHeart').disabled = true;
+            document.getElementById('stopHeart').disabled = false;
+            setTimeout(() => {
+                heartRecorder.stop();
+                heartStream.getTracks().forEach(track => track.stop());
+                document.getElementById('stopHeart').disabled = true;
+            }, 20000); // 20 seconds
+        });
+
+        document.getElementById('startSnore').addEventListener('click', async () => {
+            console.log('Start Snore button clicked');
+            // Reset button state
+            document.getElementById('startSnore').disabled = false;
+            document.getElementById('stopSnore').disabled = true;
+            snoreChunks = []; // Reset chunks
+
+            const systolic = document.getElementById('systolic').value;
+            const diastolic = document.getElementById('diastolic').value;
+            const dailySteps = document.getElementById('dailySteps').value;
+            console.log('Form values:', { systolic, diastolic, dailySteps });
+            if (!systolic || !diastolic || !dailySteps) {
+                alert('Please provide systolic BP, diastolic BP, and daily steps before analyzing.');
+                return;
+            }
+            // Voice instruction
+            const utterance = new SpeechSynthesisUtterance('recording snore detection, record a short video of the patient');
+            window.speechSynthesis.speak(utterance);
+            try {
+                snoreStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+                console.log('Microphone and camera access granted for snore detection');
+                document.getElementById('snoreVideo').srcObject = snoreStream;
+            } catch (error) {
+                console.error('Error accessing microphone/camera:', error);
+                alert('Microphone access is required for snore detection. Please allow microphone access and try again.');
+                document.getElementById('startSnore').disabled = false;
+                return;
+            }
+            try {
+                snoreRecorder = new MediaRecorder(snoreStream);
+            } catch (error) {
+                console.error('Error creating MediaRecorder:', error);
+                alert('Video recording is not supported in this browser. Please try uploading a video file instead.');
+                snoreStream.getTracks().forEach(track => track.stop());
+                document.getElementById('startSnore').disabled = false;
+                return;
+            }
+            snoreRecorder.ondataavailable = e => snoreChunks.push(e.data);
+            snoreRecorder.onstop = () => {
+                const blob = new Blob(snoreChunks, { type: 'video/webm' });
+                const file = new File([blob], 'snore.webm', { type: 'video/webm' });
+                const dt = new DataTransfer();
+                dt.items.add(file);
+                document.getElementById('snoreFileInput').files = dt.files;
+                // Show loading
+                document.getElementById('loading').style.display = 'block';
+                document.getElementById('snoreVideo').style.display = 'none';
+                document.getElementById('startSnore').style.display = 'none';
+                document.getElementById('stopSnore').style.display = 'none';
+                // Submit form after a short delay
+                setTimeout(() => {
+                    document.getElementById('uploadForm').submit();
+                }, 1000);
+            };
+            snoreRecorder.start();
+            document.getElementById('startSnore').disabled = true;
+            document.getElementById('stopSnore').disabled = false;
+            setTimeout(() => {
+                snoreRecorder.stop();
+                snoreStream.getTracks().forEach(track => track.stop());
+            }, 10000); // 10 seconds auto-stop
+        });
+
+        document.getElementById('stopSnore').addEventListener('click', () => {
+            const systolic = document.getElementById('systolic').value;
+            const diastolic = document.getElementById('diastolic').value;
+            const dailySteps = document.getElementById('dailySteps').value;
+            if (!systolic || !diastolic || !dailySteps) {
+                alert('Please provide systolic BP, diastolic BP, and daily steps before analyzing.');
+                return;
+            }
+            snoreRecorder.stop();
+            snoreStream.getTracks().forEach(track => track.stop());
+            // Show loading
+            document.getElementById('loading').style.display = 'block';
+            document.getElementById('snoreVideo').style.display = 'none';
+            document.getElementById('startSnore').style.display = 'none';
+            document.getElementById('stopSnore').style.display = 'none';
+            // Submit form after a short delay to allow video processing
+            setTimeout(() => {
+                document.getElementById('uploadForm').submit();
+            }, 1000);
+        });
+
+        document.getElementById('uploadForm').addEventListener('submit', (e) => {
+            const systolic = document.getElementById('systolic').value;
+            const diastolic = document.getElementById('diastolic').value;
+            const dailySteps = document.getElementById('dailySteps').value;
+            if (!systolic || !diastolic || !dailySteps) {
+                e.preventDefault();
+                alert('Please provide systolic BP, diastolic BP, and daily steps.');
+                return;
+            }
+            // Show loading
+            document.getElementById('loading').style.display = 'block';
+            document.getElementById('snoreVideo').style.display = 'none';
+            document.getElementById('startSnore').style.display = 'none';
+            document.getElementById('stopSnore').style.display = 'none';
+            document.getElementById('snoreFileInput').style.display = 'none';
+            document.getElementById('uploadSnore').style.display = 'none';
+            document.getElementById('analyzeManual').style.display = 'none';
+        });
+
+        document.getElementById('uploadSnore').addEventListener('click', () => {
+            const fileInput = document.getElementById('snoreFileInput');
+            if (fileInput.files.length === 0) {
+                alert('Please select a video file to upload.');
+                return;
+            }
+            // Submit form
+            document.getElementById('uploadForm').submit();
+        });
+
+        document.getElementById('analyzeManual').addEventListener('click', () => {
+            const fileInput = document.getElementById('snoreFileInput');
+            if (fileInput.files.length === 0) {
+                alert('Please upload a video file or record a video before analyzing manually.');
+                return;
+            }
+            // Submit form
+            document.getElementById('uploadForm').submit();
+        });
+
+        document.getElementById('submitManualHeart').addEventListener('click', async () => {
+            const bpm = document.getElementById('manualHeartBpm').value;
+            if (!bpm || bpm < 40 || bpm > 180) {
+                alert('Please enter a valid BPM between 40 and 180.');
+                return;
+            }
+            try {
+                const response = await fetch('/process_manual_heart_rate', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ bpm: parseInt(bpm) }),
+                });
+                const result = await response.json();
+                if (result.success) {
+                    alert('Heart rate set manually. You can now proceed to snore detection.');
+                    location.reload(); // Reload to show heart checked
+                } else {
+                    alert('Error: ' + result.message);
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('An error occurred while setting manual heart rate.');
+            }
+        });
+    </script>
+</body>
+</html>
