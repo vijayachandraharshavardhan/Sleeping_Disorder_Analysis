@@ -1,5 +1,6 @@
 from flask import Flask, render_template, request, redirect, url_for, session, flash, make_response
 import os
+import tempfile
 from werkzeug.utils import secure_filename
 from ppg.ppg_from_video import estimate_bpm_from_video
 import joblib
@@ -152,7 +153,7 @@ def analyze():
             bp_encoded = 0  # Default to first class or handle appropriately
         print("Encoded")
         # Create feature vector
-        features = [heart_rate, age, gender_encoded, bmi_encoded, bp_encoded, sleep_duration, quality_of_sleep, stress_level, physical_activity_level]
+        features = [heart_rate, age, gender_encoded, bmi_encoded, sleep_duration, quality_of_sleep, stress_level, physical_activity_level]  # 8 features
         print(f"Features: {features}")
         features_scaled = scaler.transform([features])
         print("Scaled")
@@ -171,22 +172,30 @@ def analyze():
         if 'video' in request.files and request.files['video'].filename:
             file = request.files['video']
             if file and allowed_file(file.filename):
-                filename = secure_filename(file.filename)
-                filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-                file.save(filepath)
-                # Detect snore
-                data = estimate_bpm_from_video(filepath, duration_limit=10)
-                snore_detected = data.get('snore_detected', False)
-                if request.form.get('manual_snore'):
-                    snore_detected = True
-                snore = 'Yes' if snore_detected else 'No'
-                # Clean up
-                import time
-                time.sleep(0.5)
                 try:
-                    os.remove(filepath)
-                except OSError:
-                    pass
+                    with tempfile.NamedTemporaryFile(delete=False, suffix='.webm') as temp_file:
+                        file.save(temp_file.name)
+                        filepath = temp_file.name
+                    # Detect snore
+                    data = estimate_bpm_from_video(filepath, duration_limit=10)
+                    snore_detected = data.get('snore_detected', False)
+                    if request.form.get('manual_snore'):
+                        snore_detected = True
+                    snore = 'Yes' if snore_detected else 'No'
+                    # Clean up
+                    import time
+                    time.sleep(0.5)
+                    try:
+                        os.remove(filepath)
+                    except OSError:
+                        pass
+                except Exception as e:
+                    print(f"Error handling video file: {e}")
+                    # If video processing fails, use manual snore if checked
+                    if request.form.get('manual_snore'):
+                        snore = 'Yes'
+                    else:
+                        snore = 'No'
         # Store in session
         session['bpm'] = heart_rate
         session['prediction'] = prediction

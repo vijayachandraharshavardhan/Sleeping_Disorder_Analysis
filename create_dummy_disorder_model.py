@@ -3,8 +3,8 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.preprocessing import StandardScaler, LabelEncoder
 import numpy as np
 
-# Create dummy data for disorder model (9 features)
-X = np.random.rand(100, 9)  # 100 samples, 9 features
+# Create dummy data for disorder model (8 features)
+X = np.random.rand(100, 8)  # 100 samples, 8 features
 y = np.random.randint(0, 3, 100)  # 3 classes for sleep disorder
 
 # Train dummy model
@@ -26,7 +26,7 @@ le_bmi = LabelEncoder()
 le_bmi.fit(['Normal', 'Overweight', 'Obese', 'Underweight'])
 
 le_bp = LabelEncoder()
-le_bp.fit(['120/80', '125/80', '130/85'])
+le_bp.fit(['120/80', '125/80', '130/85', '126/83', '140/90', '132/87', '130/86', '117/76', '128/85', '115/75', '135/88', '119/77', '121/79', '122/80'])
 
 # Save model, scaler, and encoders
 joblib.dump(model, 'ml/disorder_model.pkl')
