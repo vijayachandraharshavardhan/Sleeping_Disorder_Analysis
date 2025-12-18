@@ -144,6 +144,7 @@
 
         document.getElementById('startSnore').addEventListener('click', async () => {
             console.log('Start Snore button clicked');
+            alert('Button clicked, starting snore scan...');
             // Reset button state
             document.getElementById('startSnore').disabled = true;
             document.getElementById('startSnore').textContent = 'Initializing...';
@@ -162,18 +163,20 @@
                 document.getElementById('snoreVideo').style.display = 'none';
                 return;
             }
+            alert('Form values OK, requesting camera access...');
             // Voice instruction
             const utterance = new SpeechSynthesisUtterance('recording snore detection, record a short video of the patient');
             window.speechSynthesis.speak(utterance);
             try {
                 snoreStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
                 console.log('Microphone and camera access granted for snore detection');
+                alert('Camera access granted, setting video stream...');
                 document.getElementById('snoreVideo').srcObject = snoreStream;
                 document.getElementById('startSnore').textContent = 'Recording...';
                 alert('Recording started. The video feed should be visible above. Click Stop and Analyze when done.');
             } catch (error) {
                 console.error('Error accessing microphone/camera:', error);
-                alert('Microphone access is required for snore detection. Please allow microphone access and try again.');
+                alert('Error accessing camera/microphone: ' + error.message + '. Please allow access and try again.');
                 document.getElementById('startSnore').disabled = false;
                 document.getElementById('startSnore').textContent = 'Start Snore Scan';
                 document.getElementById('snoreVideo').style.display = 'none';
@@ -181,12 +184,14 @@
             }
             try {
                 snoreRecorder = new MediaRecorder(snoreStream);
+                alert('MediaRecorder created, starting recording...');
             } catch (error) {
                 console.error('Error creating MediaRecorder:', error);
-                alert('Video recording is not supported in this browser. Please try uploading a video file instead.');
+                alert('Video recording not supported: ' + error.message + '. Please try uploading a video file instead.');
                 snoreStream.getTracks().forEach(track => track.stop());
                 document.getElementById('startSnore').disabled = false;
                 document.getElementById('startSnore').textContent = 'Start Snore Scan';
+                document.getElementById('snoreVideo').style.display = 'none';
                 return;
             }
             snoreRecorder.ondataavailable = e => snoreChunks.push(e.data);
