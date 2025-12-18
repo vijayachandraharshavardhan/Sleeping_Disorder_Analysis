@@ -3,8 +3,8 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.preprocessing import StandardScaler, LabelEncoder
 import numpy as np
 
-# Create dummy data for disorder model (8 features)
-X = np.random.rand(100, 8)  # 100 samples, 8 features
+# Create dummy data for disorder model (9 features)
+X = np.random.rand(100, 9)  # 100 samples, 9 features
 y = np.random.randint(0, 3, 100)  # 3 classes for sleep disorder
 
 # Train dummy model

@@ -145,7 +145,8 @@
         document.getElementById('startSnore').addEventListener('click', async () => {
             console.log('Start Snore button clicked');
             // Reset button state
-            document.getElementById('startSnore').disabled = false;
+            document.getElementById('startSnore').disabled = true;
+            document.getElementById('startSnore').textContent = 'Initializing...';
             document.getElementById('stopSnore').disabled = true;
             snoreChunks = []; // Reset chunks
 
@@ -155,6 +156,8 @@
             console.log('Form values:', { systolic, diastolic, dailySteps });
             if (!systolic || !diastolic || !dailySteps) {
                 alert('Please provide systolic BP, diastolic BP, and daily steps before analyzing.');
+                document.getElementById('startSnore').disabled = false;
+                document.getElementById('startSnore').textContent = 'Start Snore Scan';
                 return;
             }
             // Voice instruction
@@ -164,10 +167,13 @@
                 snoreStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
                 console.log('Microphone and camera access granted for snore detection');
                 document.getElementById('snoreVideo').srcObject = snoreStream;
+                document.getElementById('snoreVideo').style.display = 'block';
+                document.getElementById('startSnore').textContent = 'Recording...';
             } catch (error) {
                 console.error('Error accessing microphone/camera:', error);
                 alert('Microphone access is required for snore detection. Please allow microphone access and try again.');
                 document.getElementById('startSnore').disabled = false;
+                document.getElementById('startSnore').textContent = 'Start Snore Scan';
                 return;
             }
             try {
@@ -177,10 +183,13 @@
                 alert('Video recording is not supported in this browser. Please try uploading a video file instead.');
                 snoreStream.getTracks().forEach(track => track.stop());
                 document.getElementById('startSnore').disabled = false;
+                document.getElementById('startSnore').textContent = 'Start Snore Scan';
                 return;
             }
             snoreRecorder.ondataavailable = e => snoreChunks.push(e.data);
             snoreRecorder.onstop = () => {
+                console.log('Recording stopped, processing...');
+                document.getElementById('startSnore').textContent = 'Processing...';
                 const blob = new Blob(snoreChunks, { type: 'video/webm' });
                 const file = new File([blob], 'snore.webm', { type: 'video/webm' });
                 const dt = new DataTransfer();
@@ -197,6 +206,7 @@
                 }, 1000);
             };
             snoreRecorder.start();
+            console.log('Recording started');
             document.getElementById('startSnore').disabled = true;
             document.getElementById('stopSnore').disabled = false;
             setTimeout(() => {

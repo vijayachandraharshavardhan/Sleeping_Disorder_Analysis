@@ -152,7 +152,7 @@ def analyze():
             bp_encoded = 0  # Default to first class or handle appropriately
         print("Encoded")
         # Create feature vector
-        features = [heart_rate, age, gender_encoded, bmi_encoded, sleep_duration, quality_of_sleep, stress_level, physical_activity_level]
+        features = [heart_rate, age, gender_encoded, bmi_encoded, bp_encoded, sleep_duration, quality_of_sleep, stress_level, physical_activity_level]
         print(f"Features: {features}")
         features_scaled = scaler.transform([features])
         print("Scaled")
