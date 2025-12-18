@@ -9,6 +9,7 @@ import numpy as np
 app = Flask(__name__)
 app.secret_key = os.environ.get('FLASK_SECRET_KEY', 'your_secret_key_here')
 app.config['UPLOAD_FOLDER'] = 'uploads'
+os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 app.config['ALLOWED_EXTENSIONS'] = {'mp4', 'avi', 'mov', 'mkv', 'webm'}
 
 def allowed_file(filename):
@@ -173,9 +174,9 @@ def analyze():
             file = request.files['video']
             if file and allowed_file(file.filename):
                 try:
-                    with tempfile.NamedTemporaryFile(delete=False, suffix='.webm') as temp_file:
-                        file.save(temp_file.name)
-                        filepath = temp_file.name
+                    filename = secure_filename(file.filename)
+                    filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+                    file.save(filepath)
                     # Detect snore
                     data = estimate_bpm_from_video(filepath, duration_limit=10)
                     snore_detected = data.get('snore_detected', False)
